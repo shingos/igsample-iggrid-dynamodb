@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <title>IgniteUI - igGrid</title>
+
+  <script src="./modernizr-custom.js"></script>
+
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+
+	<!-- Metro UI -->
+	<link rel="stylesheet" href="https://cdn.metroui.org.ua/v4.3.2/css/metro-all.min.css">
+
+	<!-- Infragistics -->
+	<link href="https://cdn-na.infragistics.com/igniteui/latest/css/themes/metro/infragistics.theme.css" rel="stylesheet">
+	<link href="https://cdn-na.infragistics.com/igniteui/latest/css/structure/infragistics.css" rel="stylesheet">
+	<script src="https://cdn-na.infragistics.com/igniteui/latest/js/i18n/infragistics-ja.js"></script>
+	<script src="https://cdn-na.infragistics.com/igniteui/latest/js/infragistics.core.js"></script>
+	<script src="https://cdn-na.infragistics.com/igniteui/latest/js/infragistics.lob.js"></script>
+	<script src="https://cdn-na.infragistics.com/igniteui/latest/js/modules/i18n/regional/infragistics.ui.regional-ja.js"></script>
+
+  <style></style>
+</head>
+
+<body>
+	<div class="container">
+    <h1 class="text-center">igGrid + DynamoDB</h1>
+		<h3 class="text-center">With igDataSource extends</h3>
+	</div>
+	
+	<div class="container">
+		<div style="height:400px;">
+			<table id="grid"></table>
+		</div>
+	</div>
+
+	<div class="container">
+		<button id="saveChanges" class="button secondary">Save Changes</button>
+	</div>
+
+<script>
+
+$(document).ready(function () {
+	$.ig.AWSDynamoDBDataSource = $.ig.RESTDataSource.extend({
+		init: function (options) {
+			console.log(options, this);
+			options = options || {};
+			options.responseDataType = "json";
+			options.responseContentType = "json";
+			options.responseDataKey = "Items"; // レコード本体
+			options.responseTotalRecCountKey = "TotalCount"; // テーブル内の総件数
+			options.restSettings = {
+				update: {
+					url: options.dataSource,
+					batch: false
+				}
+			};
+
+			this.evaluatedKey = null; // 最後にロードしたときのEvaluatedKey
+
+			this._super(options);
+			return this;
+		},
+		_processRequest: function (options) {
+			options.data.limit = options.data['$top']; // <- features'AppendRowsOnDemand'.chunkSize
+			if (!!this.evaluatedKey) {
+				options.data.exclusivestartkey = JSON.stringify(this.evaluatedKey);
+			}
+			this._ajaxRequest = $.ajax(options);
+		},
+		_responseData: function (data) {
+			if (data['Count'] > 0 && !!data['LastEvaluatedKey']) {
+				this.evaluatedKey = data['LastEvaluatedKey'];
+			}
+			else {
+				this.evaluatedKey = null;
+			}
+		}
+	});
+
+	$("#grid").igGrid({
+		autoGenerateColumns: false,
+		primaryKey: 'Index',
+		columns: [
+			{ headerText: "インデックス", key: "Index", dataType: "number", width: "10%" },
+			{ headerText: "ハッシュID", key: "Hash", dataType: "string", width: "40%" },
+			{ headerText: "ラベル", key: "Label", dataType: "string", width: "50%" }
+		],
+		dataSource: new $.ig.AWSDynamoDBDataSource({
+			dataSource: 'https://......amazonaws.com/prod/iggridapi'
+		}),
+		height: "100%",
+		width: "100%",
+		autoCommit: true,
+		features: [
+			{
+				name: 'AppendRowsOnDemand',
+				chunkSize: 20,
+				loadTrigger: 'auto' //'button'
+			},
+			{
+				name : 'Updating',
+				enableAddRow: false,
+				enableDeleteRow: false,
+				editMode: 'row',
+				columnSettings: [ 
+					{ columnKey: "Index", readOnly: true },
+					{ columnKey: "Hash", editorOptions: { readOnly: true } }, 
+					{ columnKey: "Label", editorType: 'string' }
+				]
+			}
+		]
+	});
+
+	$('#saveChanges').click(() => {
+		$("#grid").igGrid("saveChanges");
+		return false;
+	});
+});
+
+</script>
+
+</body>
+
+</html>
