@@ -3,6 +3,8 @@
 [Ignite UI for JavaScript](https://jp.infragistics.com/products/ignite-ui) の igGrid グリッドコンポーネントを利用して、AWS DynamoDB に格納されたデータを LastEvaluatedKey を使用した順次スキャンによってデータを読み込むサンプルです。
 このサンプルの目的は、AWS のデータストレージサービスと Ignite UI の併用をご紹介することだけでなく、Ignite UI の持つデータソース機能 (igDataSource) の独自拡張によって、複雑な既存システムや独自のAPIを有するサービスをデータソースとして利用していく際の手がかりとしてご利用頂くことです。
 
+![igGrid + DynamoDB](./img/screen.gif)
+
 ## 前提条件
 
 本サンプルを実行するにあたり、以下の環境をご用意ください。
